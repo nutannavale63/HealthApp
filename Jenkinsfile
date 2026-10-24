@@ -3,9 +3,8 @@ pipeline {
 
     environment {
         PATH = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
-        DOCKER_HOST = "unix:///Users/ishika/.colima/default/docker.sock"
         AWS_REGION = 'us-west-2'
-        ECR_REGISTRY = '538707363561.dkr.ecr.us-west-2.amazonaws.com'
+        ECR_REGISTRY = '591950085623.dkr.ecr.us-west-2.amazonaws.com'
         CLUSTER_NAME = 'bbhealthapp-cluster'
         NAMESPACE = 'bbhealthapp'
         FRONTEND_IMAGE = 'bbhealthapp-frontend'
