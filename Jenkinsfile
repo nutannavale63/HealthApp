@@ -20,6 +20,7 @@ pipeline {
         choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Deployment environment')
         booleanParam(name: 'REBUILD_INFRA', defaultValue: false, description: 'Rebuild infrastructure with Terraform (Stage 2)')
         booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Run automated tests')
+        string(name: 'DB_PASSWORD', defaultValue: 'ChangeMe123!', description: 'Database password for RDS')
     }
 
     stages {
@@ -73,7 +74,9 @@ pipeline {
                         terraform init -input=false
 
                         echo "Planning Terraform changes..."
-                        terraform plan -out=tfplan -var="environment=${params.ENVIRONMENT}"
+                        terraform plan -out=tfplan \
+                          -var="environment=${params.ENVIRONMENT}" \
+                          -var="db_password=${params.DB_PASSWORD}"
 
                         echo "Applying Terraform changes..."
                         terraform apply -auto-approve tfplan
