@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bbhealthapp-config
+  namespace: bbhealthapp
+data:
+  # Master Service Configuration
+  MASTER_SVC_HOST: "master-service"
+  MASTER_SVC_PORT: "8080"
+  
+  # Register Service Configuration
+  REGISTER_SVC_HOST: "register-service"
+  REGISTER_SVC_PORT: "8082"
+  
+  # Document Service Configuration
+  DOCUMENT_SVC_HOST: "document-service"
+  DOCUMENT_SVC_PORT: "8080"
+  
+  # Database Configuration
+  SPRING_PROFILES_ACTIVE: "dev"
+  
+  # Frontend Configuration
+  REACT_APP_MASTERSVC_HOST: "master-service"
+  REACT_APP_REGSVC_HOST: "register-service"
+  REACT_APP_DOCSVC_HOST: "document-service"

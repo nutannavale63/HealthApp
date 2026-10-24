@@ -1,0 +1,103 @@
+{{- if .Values.masterService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.masterService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.masterService.name }}
+spec:
+  replicas: {{ .Values.masterService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.masterService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.masterService.name }}
+    spec:
+      imagePullSecrets:
+      - name: ecr-pull-secret
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+      - name: {{ .Values.masterService.name }}
+        image: "{{ .Values.image.registry }}/{{ .Values.masterService.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.masterService.service.port }}
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: SPRING_PROFILES_ACTIVE
+        - name: token.secret
+          valueFrom:
+            secretKeyRef:
+              name: bbhealthapp-secret
+              key: token-secret
+        - name: MASTER_SVC_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: MASTER_SVC_HOST
+        - name: MASTER_SVC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: MASTER_SVC_PORT
+        {{- if .Values.masterService.persistence.enabled }}
+        volumeMounts:
+        - name: master-data
+          mountPath: /root
+        - name: master-uploads
+          mountPath: /app/useruploads
+        {{- end }}
+        resources:
+          {{- toYaml .Values.masterService.resources | nindent 10 }}
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.masterService.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      {{- if .Values.masterService.persistence.enabled }}
+      volumes:
+      - name: master-data
+        persistentVolumeClaim:
+          claimName: master-data-pvc
+      - name: master-uploads
+        persistentVolumeClaim:
+          claimName: master-uploads-pvc
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.masterService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.masterService.name }}
+spec:
+  type: {{ .Values.masterService.service.type }}
+  ports:
+  - port: {{ .Values.masterService.service.port }}
+    targetPort: {{ .Values.masterService.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ .Values.masterService.name }}
+{{- end }}

@@ -1,0 +1,195 @@
+# Default values for bbhealthapp
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  namespace: bbhealthapp
+  environment: dev
+  imagePullPolicy: Always
+
+# Image registry and repository
+image:
+  registry: 538707363561.dkr.ecr.us-west-2.amazonaws.com
+  tag: latest
+
+# Master Service configuration
+masterService:
+  enabled: true
+  name: master-service
+  replicaCount: 2
+  image:
+    repository: bbhealthapp-master-service
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+  persistence:
+    enabled: false
+    data:
+      size: 10Gi
+      storageClass: gp3
+    uploads:
+      size: 50Gi
+      storageClass: gp3
+  env:
+    spring_profiles_active: dev
+    token_secret: BinaryBrainsCovid@%^%@^!@$!@$@#$#$#6763276327
+
+# Register Service configuration
+registerService:
+  enabled: true
+  name: register-service
+  replicaCount: 2
+  image:
+    repository: bbhealthapp-register-service
+  service:
+    type: ClusterIP
+    port: 8082
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+  persistence:
+    enabled: false
+    data:
+      size: 10Gi
+      storageClass: gp3
+    uploads:
+      size: 50Gi
+      storageClass: gp3
+  env:
+    spring_profiles_active: dev
+    rootURL: http://master-service:8080
+
+# Document Service configuration
+documentService:
+  enabled: true
+  name: document-service
+  replicaCount: 2
+  image:
+    repository: bbhealthapp-document-service
+  service:
+    type: ClusterIP
+    port: 8083
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+  persistence:
+    enabled: false
+    data:
+      size: 10Gi
+      storageClass: gp3
+    uploads:
+      size: 100Gi
+      storageClass: gp3
+  env:
+    spring_profiles_active: dev
+    rootURL: http://master-service:8080
+
+# Frontend configuration
+frontend:
+  enabled: true
+  name: frontend
+  replicaCount: 2
+  image:
+    repository: bbhealthapp-frontend
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+  env:
+    REACT_APP_API_BASE_URL: /api
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/actions.register-service: '{"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"register-service","servicePort":8082,"weight":1}]},"conditions":[{"field":"path-pattern","values":["/api/register","/api/register/*"]}],"pathRewrite":[{"pattern":"/api/register(/|$)(.*)","replacement":"/$2","type":"regexp"}]}'
+    alb.ingress.kubernetes.io/actions.master-service: '{"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"master-service","servicePort":8080,"weight":1}]},"conditions":[{"field":"path-pattern","values":["/api/master","/api/master/*"]}],"pathRewrite":[{"pattern":"/api/master(/|$)(.*)","replacement":"/$2","type":"regexp"}]}'
+    alb.ingress.kubernetes.io/actions.document-service: '{"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"document-service","servicePort":8083,"weight":1}]},"conditions":[{"field":"path-pattern","values":["/api/document","/api/document/*"]}],"pathRewrite":[{"pattern":"/api/document(/|$)(.*)","replacement":"/$2","type":"regexp"}]}'
+  hosts:
+    - paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+          port: 80
+        - path: /api/master
+          pathType: Prefix
+          service: master-service
+          port: 8080
+        - path: /api/register
+          pathType: Prefix
+          service: register-service
+          port: 8082
+        - path: /api/document
+          pathType: Prefix
+          service: document-service
+          port: 8083
+  tls: []
+  #  - secretName: bbhealthapp-tls
+  #    hosts:
+  #      - bbhealthapp.local
+
+# EKS specific configuration
+eks:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/actions.register-service: '{"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"register-service","servicePort":8082,"weight":1}]},"conditions":[{"field":"path-pattern","values":["/api/register","/api/register/*"]}],"pathRewrite":[{"pattern":"/api/register(/|$)(.*)","replacement":"/$2","type":"regexp"}]}'
+    alb.ingress.kubernetes.io/actions.master-service: '{"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"master-service","servicePort":8080,"weight":1}]},"conditions":[{"field":"path-pattern","values":["/api/master","/api/master/*"]}],"pathRewrite":[{"pattern":"/api/master(/|$)(.*)","replacement":"/$2","type":"regexp"}]}'
+    alb.ingress.kubernetes.io/actions.document-service: '{"type":"forward","forwardConfig":{"targetGroups":[{"serviceName":"document-service","servicePort":8083,"weight":1}]},"conditions":[{"field":"path-pattern","values":["/api/document","/api/document/*"]}],"pathRewrite":[{"pattern":"/api/document(/|$)(.*)","replacement":"/$2","type":"regexp"}]}'
+
+# HPA configuration
+autoscaling:
+  enabled: false
+  masterService:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  registerService:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  documentService:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  frontend:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

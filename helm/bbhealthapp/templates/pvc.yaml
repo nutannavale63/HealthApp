@@ -1,0 +1,83 @@
+{{- if .Values.masterService.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: master-data-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.masterService.persistence.data.size }}
+  storageClassName: {{ .Values.masterService.persistence.data.storageClass }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: master-uploads-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.masterService.persistence.uploads.size }}
+  storageClassName: {{ .Values.masterService.persistence.uploads.storageClass }}
+{{- end }}
+---
+{{- if .Values.registerService.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: register-data-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.registerService.persistence.data.size }}
+  storageClassName: {{ .Values.registerService.persistence.data.storageClass }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: register-uploads-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.registerService.persistence.uploads.size }}
+  storageClassName: {{ .Values.registerService.persistence.uploads.storageClass }}
+{{- end }}
+---
+{{- if .Values.documentService.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: document-data-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.documentService.persistence.data.size }}
+  storageClassName: {{ .Values.documentService.persistence.data.storageClass }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: document-uploads-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.documentService.persistence.uploads.size }}
+  storageClassName: {{ .Values.documentService.persistence.uploads.storageClass }}
+{{- end }}

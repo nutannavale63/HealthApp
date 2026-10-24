@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: bbhealthapp
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      imagePullSecrets:
+      - name: ecr-pull-secret
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+      - name: frontend
+        image: 538707363561.dkr.ecr.us-west-2.amazonaws.com/bbhealthapp-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: REACT_APP_MASTERSVC_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: REACT_APP_MASTERSVC_HOST
+        - name: REACT_APP_REGSVC_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: REACT_APP_REGSVC_HOST
+        - name: REACT_APP_DOCSVC_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: REACT_APP_DOCSVC_HOST
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: bbhealthapp
+  labels:
+    app: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend

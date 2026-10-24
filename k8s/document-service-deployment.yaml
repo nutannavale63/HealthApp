@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: document-service
+  namespace: bbhealthapp
+  labels:
+    app: document-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: document-service
+  template:
+    metadata:
+      labels:
+        app: document-service
+    spec:
+      imagePullSecrets:
+      - name: ecr-pull-secret
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+      - name: document-service
+        image: 538707363561.dkr.ecr.us-west-2.amazonaws.com/bbhealthapp-document-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: SPRING_PROFILES_ACTIVE
+        - name: token.secret
+          valueFrom:
+            secretKeyRef:
+              name: bbhealthapp-secret
+              key: token-secret
+        - name: MASTER_SVC_HOST
+          value: "master-service"
+        - name: MASTER_SVC_PORT
+          value: "8080"
+        - name: rootURL
+          value: "http://master-service:8080"
+        # volumeMounts:
+        # - name: document-data
+        #   mountPath: /root
+        # - name: document-uploads
+        #   mountPath: /app/useruploads
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+      # volumes:
+      # - name: document-data
+      #   persistentVolumeClaim:
+      #     claimName: document-data-pvc
+      # - name: document-uploads
+      #   persistentVolumeClaim:
+      #     claimName: document-uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: document-service
+  namespace: bbhealthapp
+  labels:
+    app: document-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: document-service

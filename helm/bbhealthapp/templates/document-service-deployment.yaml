@@ -1,0 +1,99 @@
+{{- if .Values.documentService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.documentService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.documentService.name }}
+spec:
+  replicas: {{ .Values.documentService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.documentService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.documentService.name }}
+    spec:
+      imagePullSecrets:
+      - name: ecr-pull-secret
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+      - name: {{ .Values.documentService.name }}
+        image: "{{ .Values.image.registry }}/{{ .Values.documentService.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.documentService.service.port }}
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: SPRING_PROFILES_ACTIVE
+        - name: token.secret
+          valueFrom:
+            secretKeyRef:
+              name: bbhealthapp-secret
+              key: token-secret
+        - name: MASTER_SVC_HOST
+          value: "master-service"
+        - name: MASTER_SVC_PORT
+          value: "8080"
+        - name: rootURL
+          value: {{ .Values.documentService.env.rootURL }}
+        {{- if .Values.documentService.persistence.enabled }}
+        volumeMounts:
+        - name: document-data
+          mountPath: /root
+        - name: document-uploads
+          mountPath: /app/useruploads
+        {{- end }}
+        resources:
+          {{- toYaml .Values.documentService.resources | nindent 10 }}
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.documentService.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      {{- if .Values.documentService.persistence.enabled }}
+      volumes:
+      - name: document-data
+        persistentVolumeClaim:
+          claimName: document-data-pvc
+      - name: document-uploads
+        persistentVolumeClaim:
+          claimName: document-uploads-pvc
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.documentService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.documentService.name }}
+spec:
+  type: {{ .Values.documentService.service.type }}
+  ports:
+  - port: {{ .Values.documentService.service.port }}
+    targetPort: {{ .Values.documentService.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ .Values.documentService.name }}
+{{- end }}

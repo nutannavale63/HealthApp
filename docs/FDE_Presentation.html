@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FDE – Full-stack Development Experience | BBHealthApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #050814;
+      --surface:   #0d1326;
+      --card:      #111827;
+      --border:    #1e2d4a;
+      --accent1:   #6c63ff;
+      --accent2:   #00d4ff;
+      --accent3:   #ff6b9d;
+      --accent4:   #ffd166;
+      --accent5:   #06d6a0;
+      --text:      #e8eaf6;
+      --muted:     #8892a4;
+      --radius:    16px;
+      --slide-w:   1200px;
+      --slide-h:   675px;
+    }
+
+    html, body {
+      background: var(--bg);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ===== SLIDE ENGINE ===== */
+    #deck { width: 100%; height: 100vh; position: relative; }
+
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .5s ease, transform .5s ease;
+      transform: translateY(30px);
+      padding: 2rem;
+      overflow: hidden;
+    }
+    .slide.active {
+      opacity: 1; pointer-events: all;
+      transform: translateY(0);
+    }
+    .slide.exit {
+      opacity: 0;
+      transform: translateY(-30px);
+    }
+
+    /* ===== BACKGROUND BLOBS ===== */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: .18;
+      animation: pulse 6s ease-in-out infinite alternate;
+    }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+
+    /* ===== NAV BAR ===== */
+    #nav {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(13,19,38,.85);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      padding: .6rem 1.4rem;
+      border-radius: 50px;
+      z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    #nav button {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1.2rem;
+      padding: .3rem .8rem; border-radius: 8px;
+      transition: color .2s, background .2s;
+    }
+    #nav button:hover { color: var(--accent2); background: rgba(0,212,255,.08); }
+    #slide-counter {
+      color: var(--muted); font-size: .85rem; min-width: 60px; text-align: center;
+    }
+    .dot-row { display: flex; gap: .4rem; align-items: center; }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border); transition: background .3s, transform .3s;
+      cursor: pointer;
+    }
+    .dot.active { background: var(--accent2); transform: scale(1.4); }
+
+    /* ===== SLIDE PROGRESS BAR ===== */
+    #progress {
+      position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent1), var(--accent2));
+      transition: width .4s ease;
+      z-index: 999;
+    }
+
+    /* ===== SLIDE NUMBER BADGE ===== */
+    #slide-badge {
+      position: fixed; top: 1.2rem; right: 1.5rem;
+      font-size: .75rem; color: var(--muted);
+      background: rgba(13,19,38,.7);
+      padding: .3rem .7rem; border-radius: 20px;
+      border: 1px solid var(--border);
+      z-index: 999; font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ===== LOGO ===== */
+    #logo {
+      position: fixed; top: 1.1rem; left: 1.5rem;
+      font-size: .9rem; font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: .08em; z-index: 999;
+      display: flex; gap: .4rem; align-items: center;
+    }
+    #logo span { color: var(--accent1); }
+
+    /* ===== COMMON SLIDE ELEMENTS ===== */
+    .tag {
+      display: inline-block;
+      padding: .25rem .8rem; border-radius: 20px;
+      font-size: .75rem; font-weight: 600; letter-spacing: .06em;
+      text-transform: uppercase; margin-bottom: .8rem;
+    }
+    h1.hero { font-size: clamp(2.4rem, 5vw, 4.5rem); font-weight: 900; line-height: 1.1; text-align: center; }
+    h2.slide-title { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; }
+    p.lead { font-size: clamp(1rem, 1.5vw, 1.2rem); color: var(--muted); line-height: 1.7; max-width: 720px; text-align: center; }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--accent5));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    /* ===== CARDS ===== */
+    .cards { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; width: 100%; max-width: 1100px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.6rem;
+      flex: 1 1 240px;
+      max-width: 280px;
+      position: relative;
+      overflow: hidden;
+      transition: transform .25s, box-shadow .25s;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,.35); }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .card.c1::before { background: var(--accent1); }
+    .card.c2::before { background: var(--accent2); }
+    .card.c3::before { background: var(--accent3); }
+    .card.c4::before { background: var(--accent4); }
+    .card.c5::before { background: var(--accent5); }
+    .card-icon { font-size: 2rem; margin-bottom: .6rem; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
+    .card p { font-size: .85rem; color: var(--muted); line-height: 1.55; }
+
+    /* ===== LIST ITEMS ===== */
+    .check-list { list-style: none; display: flex; flex-direction: column; gap: .7rem; }
+    .check-list li {
+      display: flex; align-items: flex-start; gap: .7rem;
+      font-size: .95rem; color: var(--muted); line-height: 1.5;
+    }
+    .check-list li .ico { flex-shrink: 0; font-size: 1.1rem; margin-top: .05rem; }
+
+    /* ===== TIMELINE ===== */
+    .timeline { display: flex; flex-direction: column; gap: 0; width: 100%; max-width: 800px; }
+    .tl-item { display: flex; gap: 1.2rem; }
+    .tl-line { display: flex; flex-direction: column; align-items: center; }
+    .tl-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent2); border: 2px solid var(--bg);
+      flex-shrink: 0; margin-top: 4px;
+      box-shadow: 0 0 0 4px rgba(0,212,255,.15);
+    }
+    .tl-connector { width: 2px; flex: 1; background: var(--border); min-height: 24px; }
+    .tl-content { padding-bottom: 1.4rem; }
+    .tl-week { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent2); font-weight: 700; }
+    .tl-title { font-size: 1rem; font-weight: 700; margin: .1rem 0 .25rem; }
+    .tl-desc { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+
+    /* ===== TECH PILLS ===== */
+    .pill-group { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
+    .pill {
+      display: flex; align-items: center; gap: .4rem;
+      padding: .45rem 1rem; border-radius: 50px;
+      font-size: .82rem; font-weight: 600;
+      border: 1px solid; white-space: nowrap;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .pill:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+    .pill.blue  { color: var(--accent2); border-color: rgba(0,212,255,.3); background: rgba(0,212,255,.06); }
+    .pill.purple{ color: var(--accent1); border-color: rgba(108,99,255,.3); background: rgba(108,99,255,.06); }
+    .pill.pink  { color: var(--accent3); border-color: rgba(255,107,157,.3); background: rgba(255,107,157,.06); }
+    .pill.yellow{ color: var(--accent4); border-color: rgba(255,209,102,.3); background: rgba(255,209,102,.06); }
+    .pill.green { color: var(--accent5); border-color: rgba(6,214,160,.3);  background: rgba(6,214,160,.06); }
+
+    /* ===== STAT BOXES ===== */
+    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+    .stat-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.4rem 2rem; text-align: center;
+      flex: 1 1 160px; max-width: 200px;
+    }
+    .stat-num { font-size: 2.4rem; font-weight: 900; }
+    .stat-label { font-size: .8rem; color: var(--muted); margin-top: .2rem; }
+
+    /* ===== TWO-COLUMN ===== */
+    .two-col { display: flex; gap: 2.5rem; width: 100%; max-width: 1050px; align-items: flex-start; }
+    .two-col > div { flex: 1; }
+
+    /* ===== ROADMAP STEPS ===== */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; width: 100%; max-width: 1000px; }
+    .step {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.2rem;
+      position: relative;
+    }
+    .step-num {
+      font-size: 3rem; font-weight: 900;
+      position: absolute; top: .5rem; right: 1rem;
+      opacity: .07; font-family: 'Outfit', sans-serif;
+      line-height: 1;
+    }
+    .step h4 { font-size: .95rem; font-weight: 700; margin: .4rem 0 .3rem; }
+    .step p  { font-size: .8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ===== CTA BUTTON ===== */
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .85rem 2.2rem; border-radius: 50px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      border: none; text-decoration: none;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      color: #fff; transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 8px 30px rgba(108,99,255,.35);
+      margin-top: 1.5rem;
+    }
+    .cta-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(108,99,255,.5); }
+
+    /* ===== QUOTE BLOCK ===== */
+    .quote {
+      border-left: 4px solid var(--accent1);
+      padding: .8rem 1.2rem;
+      background: rgba(108,99,255,.06);
+      border-radius: 0 8px 8px 0;
+      font-style: italic; font-size: .95rem;
+      color: var(--muted); margin: .8rem 0;
+    }
+
+    /* ===== ROLE CARDS ===== */
+    .role-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; max-width: 700px; }
+    .role-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.2rem;
+      display: flex; gap: .8rem; align-items: flex-start;
+    }
+    .role-emoji { font-size: 1.8rem; flex-shrink: 0; }
+    .role-card h4 { font-size: .9rem; font-weight: 700; margin-bottom: .2rem; }
+    .role-card p  { font-size: .78rem; color: var(--muted); line-height: 1.45; }
+
+    /* ===== ARCHITECTURE DIAGRAM (visual) ===== */
+    .arch { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .arch-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: .9rem 1.2rem; text-align: center;
+      font-size: .8rem; min-width: 120px;
+    }
+    .arch-box .a-icon { font-size: 1.6rem; margin-bottom: .3rem; }
+    .arch-box .a-name { font-weight: 700; font-size: .85rem; }
+    .arch-box .a-sub  { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+    .arch-arrow { color: var(--muted); font-size: 1.4rem; }
+
+    /* ===== KEYFRAME ANIMATIONS ===== */
+    @keyframes floatY {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+    .float { animation: floatY 4s ease-in-out infinite; }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position:  200% center; }
+    }
+
+    /* SLIDE-SPECIFIC OVERRIDES */
+    #slide-1 { text-align: center; }
+    #slide-1 .hero-sub { font-size: 1.05rem; color: var(--muted); margin: 1rem 0 0; max-width: 560px; }
+
+    /* responsive tweaks */
+    @media (max-width: 700px) {
+      .steps { grid-template-columns: 1fr; }
+      .two-col { flex-direction: column; }
+      .role-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Fixed chrome -->
+<div id="progress"></div>
+<div id="logo">BB<span>Health</span>App · FDE</div>
+<div id="slide-badge">01 / 10</div>
+
+<!-- Slide Deck -->
+<div id="deck">
+
+  <!-- ========== SLIDE 1 – TITLE ========== -->
+  <div class="slide active" id="slide-1">
+    <div class="blob" style="width:600px;height:600px;background:var(--accent1);top:-200px;left:-200px;"></div>
+    <div class="blob" style="width:500px;height:500px;background:var(--accent2);bottom:-150px;right:-150px;animation-delay:2s;"></div>
+    <div class="tag" style="background:rgba(108,99,255,.15);color:var(--accent1);">BBHealthApp Program</div>
+    <h1 class="hero">
+      <span class="gradient-text">FDE</span> —<br />Full-stack Development<br />Experience
+    </h1>
+    <p class="hero-sub">
+      A structured learning program bridging the gap between classrooms and real-world cloud-native development — built for both freshers and experienced engineers.
+    </p>
+    <div class="stats" style="margin-top:2.5rem;">
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent1);">4</div><div class="stat-label">Microservices</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent2);">12</div><div class="stat-label">Tech Skills</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent5);">8</div><div class="stat-label">Week Program</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent4);">100%</div><div class="stat-label">Hands-on</div></div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 2 – WHAT IS FDE ========== -->
+  <div class="slide" id="slide-2">
+    <div class="blob" style="width:500px;height:500px;background:var(--accent2);top:-150px;right:-100px;"></div>
+    <div class="tag" style="background:rgba(0,212,255,.12);color:var(--accent2);">What is FDE?</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.5rem;">
+      Full-stack Development <span class="gradient-text">Experience</span>
+    </h2>
+    <div class="two-col">
+      <div>
+        <p style="color:var(--muted);font-size:.95rem;line-height:1.75;margin-bottom:1.2rem;">
+          FDE is a <strong style="color:var(--text);">hands-on, project-based</strong> training program designed around the real-world <strong style="color:var(--accent2);">BBHealthApp</strong> — a COVID-19 Health Management System — to teach participants how production software is built, deployed, and maintained.
+        </p>
+        <div class="quote">
+          "FDE turns classroom theory into real cloud-native product engineering."
+        </div>
+        <p style="color:var(--muted);font-size:.9rem;line-height:1.7;margin-top:1rem;">
+          Unlike traditional courses, FDE uses a <em>live, production-grade codebase</em> as the learning canvas — covering frontend, backend, databases, DevOps, and cloud infrastructure all in one program.
+        </p>
+      </div>
+      <div>
+        <ul class="check-list">
+          <li><span class="ico">🎯</span><span><strong style="color:var(--text);">Goal-oriented:</strong> Learn by building and fixing real features in BBHealthApp</span></li>
+          <li><span class="ico">🏗️</span><span><strong style="color:var(--text);">Architecture-first:</strong> Understand microservices before writing a single line of code</span></li>
+          <li><span class="ico">☁️</span><span><strong style="color:var(--text);">Cloud-native:</strong> Deploy on AWS EKS with Kubernetes, Helm & CI/CD pipelines</span></li>
+          <li><span class="ico">🔐</span><span><strong style="color:var(--text);">Security-aware:</strong> JWT, BCrypt, RBAC, CORS — baked in from day one</span></li>
+          <li><span class="ico">🤝</span><span><strong style="color:var(--text);">Team-based:</strong> Git workflows, PR reviews, Jenkins pipelines like a real team</span></li>
+          <li><span class="ico">📊</span><span><strong style="color:var(--text);">Measurable outcomes:</strong> Working deployments, documented PRs, and a portfolio</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 3 – WHAT FDE DOES ========== -->
+  <div class="slide" id="slide-3">
+    <div class="blob" style="width:600px;height:600px;background:var(--accent5);bottom:-200px;left:-200px;"></div>
+    <div class="tag" style="background:rgba(6,214,160,.12);color:var(--accent5);">Core Functions</div>
+    <h2 class="slide-title" style="margin-bottom:1.4rem;text-align:center;">What does FDE <span class="gradient-text">do?</span></h2>
+    <div class="cards">
+      <div class="card c1">
+        <div class="card-icon">🧩</div>
+        <h3>Breaks Down Real Systems</h3>
+        <p>Participants dissect BBHealthApp's 4 microservices — Master, Register, Document & Frontend — to understand how large systems are organised and communicate.</p>
+      </div>
+      <div class="card c2">
+        <div class="card-icon">🛠️</div>
+        <h3>Teaches by Doing</h3>
+        <p>Every concept — from JWT auth to Kubernetes rolling updates — is applied directly inside a running project, not toy examples.</p>
+      </div>
+      <div class="card c3">
+        <div class="card-icon">🚀</div>
+        <h3>Bridges Dev → Prod</h3>
+        <p>Participants learn the full journey: local Docker Compose → Jenkins CI/CD → AWS ECR → EKS cluster → ALB Ingress with SSL.</p>
+      </div>
+      <div class="card c4">
+        <div class="card-icon">🐛</div>
+        <h3>Trains Debugging Skills</h3>
+        <p>Includes real ERROR_LOG.md with documented issues — null token bugs, port conflicts, CORS errors — and teaches systematic root-cause analysis.</p>
+      </div>
+      <div class="card c5">
+        <div class="card-icon">📋</div>
+        <h3>Builds Engineering Habits</h3>
+        <p>Enforces proper Git commits, PR reviews, documentation writing (ARCHITECTURE.md), and incident logging — industry-grade engineering habits from day one.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 4 – TECH STACK COVERED ========== -->
+  <div class="slide" id="slide-4">
+    <div class="blob" style="width:500px;height:500px;background:var(--accent1);top:-150px;left:-100px;"></div>
+    <div class="tag" style="background:rgba(108,99,255,.12);color:var(--accent1);">Technology Stack</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.6rem;">Technologies Covered in <span class="gradient-text">FDE</span></h2>
+    <div style="max-width:900px;width:100%;">
+      <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.08em;">Frontend</p>
+      <div class="pill-group" style="margin-bottom:1.2rem;">
+        <div class="pill blue">⚛️ React.js 18</div>
+        <div class="pill blue">🎨 Material-UI</div>
+        <div class="pill blue">🔄 RxJS</div>
+        <div class="pill blue">🌐 Apache HTTPD</div>
+        <div class="pill blue">🔗 Axios</div>
+      </div>
+      <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.08em;">Backend</p>
+      <div class="pill-group" style="margin-bottom:1.2rem;">
+        <div class="pill purple">☕ Spring Boot 2.3</div>
+        <div class="pill purple">🔐 Spring Security</div>
+        <div class="pill purple">🔑 JWT / BCrypt</div>
+        <div class="pill purple">🗄️ H2 / MySQL</div>
+        <div class="pill purple">📦 Maven</div>
+      </div>
+      <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.08em;">Infrastructure & DevOps</p>
+      <div class="pill-group" style="margin-bottom:1.2rem;">
+        <div class="pill green">🐳 Docker</div>
+        <div class="pill green">☸️ Kubernetes (EKS)</div>
+        <div class="pill green">⛵ Helm</div>
+        <div class="pill green">🏗️ Jenkins CI/CD</div>
+        <div class="pill green">📦 AWS ECR</div>
+        <div class="pill green">☁️ AWS ALB</div>
+        <div class="pill green">🌱 Terraform</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 5 – ARCHITECTURE OVERVIEW ========== -->
+  <div class="slide" id="slide-5">
+    <div class="blob" style="width:600px;height:600px;background:var(--accent3);bottom:-200px;right:-200px;"></div>
+    <div class="tag" style="background:rgba(255,107,157,.12);color:var(--accent3);">System Architecture</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.5rem;">BBHealthApp <span class="gradient-text">Architecture</span></h2>
+    <div class="arch">
+      <div class="arch-box" style="border-color:rgba(0,212,255,.3);">
+        <div class="a-icon">🌐</div>
+        <div class="a-name" style="color:var(--accent2);">AWS ALB</div>
+        <div class="a-sub">SSL + Routing</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box" style="border-color:rgba(108,99,255,.3);">
+        <div class="a-icon">⚛️</div>
+        <div class="a-name" style="color:var(--accent1);">Frontend</div>
+        <div class="a-sub">React + HTTPD · :80</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div style="display:flex;flex-direction:column;gap:0.7rem;">
+        <div class="arch-box" style="border-color:rgba(255,107,157,.3);">
+          <div class="a-icon">🔐</div>
+          <div class="a-name" style="color:var(--accent3);">Master Svc</div>
+          <div class="a-sub">Auth · JWT · RBAC · :8080</div>
+        </div>
+        <div class="arch-box" style="border-color:rgba(6,214,160,.3);">
+          <div class="a-icon">📝</div>
+          <div class="a-name" style="color:var(--accent5);">Register Svc</div>
+          <div class="a-sub">User Registration · :8082</div>
+        </div>
+        <div class="arch-box" style="border-color:rgba(255,209,102,.3);">
+          <div class="a-icon">📄</div>
+          <div class="a-name" style="color:var(--accent4);">Document Svc</div>
+          <div class="a-sub">File Storage · :8083</div>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div style="display:flex;flex-direction:column;gap:0.7rem;">
+        <div class="arch-box" style="border-color:rgba(108,99,255,.3);">
+          <div class="a-icon">🗄️</div>
+          <div class="a-name" style="color:var(--accent1);">H2 / MySQL</div>
+          <div class="a-sub">Database</div>
+        </div>
+        <div class="arch-box" style="border-color:rgba(0,212,255,.3);">
+          <div class="a-icon">📦</div>
+          <div class="a-name" style="color:var(--accent2);">AWS ECR</div>
+          <div class="a-sub">Image Registry</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:1.5rem;font-size:.85rem;color:var(--muted);text-align:center;">
+      Deployed on <strong style="color:var(--text);">AWS EKS</strong> with Kubernetes orchestration, <strong style="color:var(--text);">Helm</strong> for deployments, <strong style="color:var(--text);">Jenkins</strong> for CI/CD
+    </p>
+  </div>
+
+  <!-- ========== SLIDE 6 – USER ROLES ========== -->
+  <div class="slide" id="slide-6">
+    <div class="blob" style="width:500px;height:500px;background:var(--accent4);top:-200px;right:-100px;"></div>
+    <div class="tag" style="background:rgba(255,209,102,.12);color:var(--accent4);">Real-World Context</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.5rem;">User Roles in <span class="gradient-text">BBHealthApp</span></h2>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:1.5rem;text-align:center;max-width:600px;">
+      FDE participants implement and understand features for 4 distinct user roles — each with different permissions, workflows, and dashboards.
+    </p>
+    <div class="role-grid">
+      <div class="role-card">
+        <div class="role-emoji">🏥</div>
+        <div>
+          <h4>Patient (USER)</h4>
+          <p>Request COVID tests, book consultations, upload medical documents, view test results & reports.</p>
+        </div>
+      </div>
+      <div class="role-card">
+        <div class="role-emoji">👨‍⚕️</div>
+        <div>
+          <h4>Doctor</h4>
+          <p>Review pending consultations, view patient test results, provide medical consultation, upload documents.</p>
+        </div>
+      </div>
+      <div class="role-card">
+        <div class="role-emoji">🧪</div>
+        <div>
+          <h4>Tester</h4>
+          <p>Manage test requests queue, perform tests, update results — positive/negative/quarantine decisions.</p>
+        </div>
+      </div>
+      <div class="role-card">
+        <div class="role-emoji">🏛️</div>
+        <div>
+          <h4>Government Authority</h4>
+          <p>Approve user registrations, view analytics dashboard, manage system thresholds, oversee all operations.</p>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:1.2rem;font-size:.82rem;color:var(--muted);text-align:center;">
+      Role-based access controlled via <strong style="color:var(--text);">Spring Security + JWT scopes</strong>
+    </p>
+  </div>
+
+  <!-- ========== SLIDE 7 – HOW FRESHERS CAN PREPARE ========== -->
+  <div class="slide" id="slide-7">
+    <div class="blob" style="width:600px;height:600px;background:var(--accent1);bottom:-200px;left:-200px;"></div>
+    <div class="tag" style="background:rgba(108,99,255,.12);color:var(--accent1);">For Freshers</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.5rem;">How to <span class="gradient-text">Prepare</span> as a Fresher</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="color:var(--accent1);">01</div>
+        <div style="font-size:1.4rem;">🌐</div>
+        <h4>Master Web Basics</h4>
+        <p>HTML, CSS, JavaScript fundamentals. Understand how browsers communicate with servers (HTTP, REST APIs, JSON).</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="color:var(--accent2);">02</div>
+        <div style="font-size:1.4rem;">⚛️</div>
+        <h4>Learn React Fundamentals</h4>
+        <p>Components, state, props, hooks (useState, useEffect). Practice building small CRUD apps with Axios HTTP calls.</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="color:var(--accent5);">03</div>
+        <div style="font-size:1.4rem;">☕</div>
+        <h4>Java & Spring Boot Basics</h4>
+        <p>OOP in Java, REST controllers, Maven builds. Create a simple Spring Boot API with H2 database — exactly what BBHealthApp uses.</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="color:var(--accent4);">04</div>
+        <div style="font-size:1.4rem;">🐳</div>
+        <h4>Docker Essentials</h4>
+        <p>Write a Dockerfile, run containers, understand Docker Compose for multi-service setups. Run BBHealthApp locally.</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="color:var(--accent3);">05</div>
+        <div style="font-size:1.4rem;">🔀</div>
+        <h4>Git & Collaboration</h4>
+        <p>Branch strategy, pull requests, merge conflicts. Learn Git flow as used in the Jenkins CI/CD pipeline of this project.</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="color:var(--accent1);">06</div>
+        <div style="font-size:1.4rem;">🔐</div>
+        <h4>Security Concepts</h4>
+        <p>Understand authentication vs authorization, JWT tokens, password hashing with BCrypt, and why CORS matters.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 8 – COURSE CURRICULUM ========== -->
+  <div class="slide" id="slide-8">
+    <div class="blob" style="width:500px;height:500px;background:var(--accent2);top:-150px;right:-100px;"></div>
+    <div class="tag" style="background:rgba(0,212,255,.12);color:var(--accent2);">Course Curriculum</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.5rem;">8-Week <span class="gradient-text">Learning Path</span></h2>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-line"><div class="tl-dot" style="background:var(--accent1);box-shadow:0 0 0 4px rgba(108,99,255,.15);"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><div class="tl-week">Week 1–2</div><div class="tl-title">Foundation & Setup</div><div class="tl-desc">System architecture deep-dive · Docker Compose local setup · Git workflow · Reading ARCHITECTURE.md & PROJECT_DOCUMENTATION.md</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-line"><div class="tl-dot" style="background:var(--accent2);box-shadow:0 0 0 4px rgba(0,212,255,.15);"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><div class="tl-week">Week 3–4</div><div class="tl-title">Backend Deep Dive</div><div class="tl-desc">Spring Boot microservices · JWT security implementation · REST API design · Database (H2 → MySQL) · Debugging ERROR_LOG issues</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-line"><div class="tl-dot" style="background:var(--accent5);box-shadow:0 0 0 4px rgba(6,214,160,.15);"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><div class="tl-week">Week 5–6</div><div class="tl-title">Frontend & Integration</div><div class="tl-desc">React components · Material-UI · RxJS state management · Axios API integration · Role-based dashboards · End-to-end testing</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-line"><div class="tl-dot" style="background:var(--accent4);box-shadow:0 0 0 4px rgba(255,209,102,.15);"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><div class="tl-week">Week 7–8</div><div class="tl-title">Cloud & Production Deployment</div><div class="tl-desc">AWS EKS · Kubernetes deployments · Helm charts · Jenkins pipeline · ECR image push · ALB Ingress · Terraform IaC · Monitoring with CloudWatch</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 9 – EXPERIENCED VS FRESHER ========== -->
+  <div class="slide" id="slide-9">
+    <div class="blob" style="width:600px;height:600px;background:var(--accent3);top:-200px;left:-200px;"></div>
+    <div class="tag" style="background:rgba(255,107,157,.12);color:var(--accent3);">Course Design</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:1.5rem;">Course Focus: <span class="gradient-text">Fresher vs Experienced</span></h2>
+    <div class="two-col" style="gap:2rem;max-width:950px;">
+      <div style="background:var(--card);border:1px solid rgba(108,99,255,.3);border-radius:var(--radius);padding:1.5rem;">
+        <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+          <span style="font-size:1.8rem;">🌱</span>
+          <div><div style="font-size:.7rem;color:var(--accent1);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Fresher Track</div><div style="font-weight:800;font-size:1.05rem;">Guided Learning</div></div>
+        </div>
+        <ul class="check-list">
+          <li><span class="ico">📖</span><span>Structured modules with step-by-step labs</span></li>
+          <li><span class="ico">🏗️</span><span>Architecture-first: understand before coding</span></li>
+          <li><span class="ico">🧑‍🏫</span><span>Pair programming with mentors</span></li>
+          <li><span class="ico">🐛</span><span>Guided debugging of ERROR_LOG issues</span></li>
+          <li><span class="ico">📋</span><span>Pre-built tasks: add an API endpoint, fix a bug, write a test</span></li>
+          <li><span class="ico">☁️</span><span>Assisted cloud deployment with Helm & EKS</span></li>
+          <li><span class="ico">🏆</span><span>Portfolio project: a documented PR to BBHealthApp</span></li>
+        </ul>
+      </div>
+      <div style="background:var(--card);border:1px solid rgba(6,214,160,.3);border-radius:var(--radius);padding:1.5rem;">
+        <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+          <span style="font-size:1.8rem;">🚀</span>
+          <div><div style="font-size:.7rem;color:var(--accent5);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Experienced Track</div><div style="font-weight:800;font-size:1.05rem;">Deep-dive Engineering</div></div>
+        </div>
+        <ul class="check-list">
+          <li><span class="ico">⚡</span><span>Self-paced with advanced design challenges</span></li>
+          <li><span class="ico">🏛️</span><span>Propose and implement architectural improvements</span></li>
+          <li><span class="ico">🔒</span><span>Harden security: CORS restrictions, refresh tokens, rate limiting</span></li>
+          <li><span class="ico">📊</span><span>Add Prometheus/Grafana monitoring stack</span></li>
+          <li><span class="ico">🗄️</span><span>Migrate H2 → PostgreSQL with Flyway migrations</span></li>
+          <li><span class="ico">🧪</span><span>Write integration + end-to-end tests (JUnit, Cypress)</span></li>
+          <li><span class="ico">🌐</span><span>Design and implement the future improvements from docs</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SLIDE 10 – OUTCOMES / CTA ========== -->
+  <div class="slide" id="slide-10">
+    <div class="blob" style="width:700px;height:700px;background:var(--accent1);top:-300px;right:-300px;"></div>
+    <div class="blob" style="width:600px;height:600px;background:var(--accent5);bottom:-250px;left:-250px;animation-delay:3s;"></div>
+    <div class="tag" style="background:rgba(6,214,160,.12);color:var(--accent5);">Outcomes</div>
+    <h2 class="slide-title" style="text-align:center;margin-bottom:.6rem;">
+      What You'll <span class="gradient-text">Walk Away With</span>
+    </h2>
+    <p style="color:var(--muted);font-size:.9rem;text-align:center;margin-bottom:2rem;max-width:600px;">
+      After completing the FDE program, every participant — fresher or experienced — walks away with measurable, demonstrable skills.
+    </p>
+    <div class="cards" style="max-width:900px;">
+      <div class="card c1" style="max-width:200px;">
+        <div class="card-icon">🏗️</div>
+        <h3>Production Codebase</h3>
+        <p>Merged PRs on a real microservices project you can show in interviews.</p>
+      </div>
+      <div class="card c2" style="max-width:200px;">
+        <div class="card-icon">☁️</div>
+        <h3>Cloud Deployment</h3>
+        <p>A live app running on AWS EKS with CI/CD — not just a tutorial screenshot.</p>
+      </div>
+      <div class="card c5" style="max-width:200px;">
+        <div class="card-icon">🔐</div>
+        <h3>Security Skills</h3>
+        <p>JWT, BCrypt, RBAC — you'll understand and implement real security, not just theory.</p>
+      </div>
+      <div class="card c4" style="max-width:200px;">
+        <div class="card-icon">📋</div>
+        <h3>Engineering Habits</h3>
+        <p>Documentation, incident logs, Git discipline — skills that make you stand out on any team.</p>
+      </div>
+    </div>
+    <a class="cta-btn" href="#slide-1">
+      🚀 Start Your FDE Journey
+    </a>
+  </div>
+
+</div><!-- #deck -->
+
+<!-- Navigation -->
+<div id="nav">
+  <button id="btn-prev" title="Previous">&#8592;</button>
+  <div class="dot-row" id="dot-row"></div>
+  <span id="slide-counter">1 / 10</span>
+  <button id="btn-next" title="Next">&#8594;</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const progress = document.getElementById('progress');
+  const badge = document.getElementById('slide-badge');
+  const counter = document.getElementById('slide-counter');
+  const dotRow = document.getElementById('dot-row');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.title = `Slide ${i + 1}`;
+    d.addEventListener('click', () => goTo(i));
+    dotRow.appendChild(d);
+  });
+
+  function goTo(n) {
+    if (n === current) return;
+    slides[current].classList.remove('active');
+    slides[current].classList.add('exit');
+    setTimeout(() => slides[n > current ? n - 1 : n + 1]?.classList.remove('exit'), 500);
+    slides[current].addEventListener('transitionend', () => slides[current].classList.remove('exit'), { once: true });
+    current = n;
+    slides[current].classList.add('active');
+    update();
+  }
+
+  function update() {
+    const dots = dotRow.querySelectorAll('.dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    const num = `${String(current + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+    badge.textContent = num;
+    counter.textContent = `${current + 1} / ${total}`;
+    progress.style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  btnNext.addEventListener('click', () => current < total - 1 && goTo(current + 1));
+  btnPrev.addEventListener('click', () => current > 0 && goTo(current - 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); current < total - 1 && goTo(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                     { e.preventDefault(); current > 0 && goTo(current - 1); }
+  });
+
+  // Touch / swipe
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) dx < 0 ? (current < total - 1 && goTo(current + 1)) : (current > 0 && goTo(current - 1));
+  });
+
+  update();
+</script>
+</body>
+</html>

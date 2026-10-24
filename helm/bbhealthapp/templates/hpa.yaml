@@ -1,0 +1,89 @@
+{{- if .Values.autoscaling.enabled }}
+{{- if .Values.masterService.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.masterService.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.masterService.name }}
+  minReplicas: {{ .Values.autoscaling.masterService.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.masterService.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.masterService.targetCPUUtilizationPercentage }}
+{{- end }}
+---
+{{- if .Values.registerService.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.registerService.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.registerService.name }}
+  minReplicas: {{ .Values.autoscaling.registerService.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.registerService.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.registerService.targetCPUUtilizationPercentage }}
+{{- end }}
+---
+{{- if .Values.documentService.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.documentService.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.documentService.name }}
+  minReplicas: {{ .Values.autoscaling.documentService.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.documentService.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.documentService.targetCPUUtilizationPercentage }}
+{{- end }}
+---
+{{- if .Values.frontend.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.frontend.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.frontend.name }}
+  minReplicas: {{ .Values.autoscaling.frontend.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.frontend.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.frontend.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}

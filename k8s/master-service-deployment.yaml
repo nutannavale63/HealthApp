@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master-service
+  namespace: bbhealthapp
+  labels:
+    app: master-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: master-service
+  template:
+    metadata:
+      labels:
+        app: master-service
+    spec:
+      imagePullSecrets:
+      - name: ecr-pull-secret
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+      - name: master-service
+        image: 538707363561.dkr.ecr.us-west-2.amazonaws.com/bbhealthapp-master-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: SPRING_PROFILES_ACTIVE
+        - name: token.secret
+          valueFrom:
+            secretKeyRef:
+              name: bbhealthapp-secret
+              key: token-secret
+        - name: MASTER_SVC_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: MASTER_SVC_HOST
+        - name: MASTER_SVC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: bbhealthapp-config
+              key: MASTER_SVC_PORT
+        # volumeMounts:
+        # - name: master-data
+        #   mountPath: /root
+        # - name: master-uploads
+        #   mountPath: /app/useruploads
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+      # volumes:
+      # - name: master-data
+      #   persistentVolumeClaim:
+      #     claimName: master-data-pvc
+      # - name: master-uploads
+      #   persistentVolumeClaim:
+      #     claimName: master-uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: master-service
+  namespace: bbhealthapp
+  labels:
+    app: master-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: master-service

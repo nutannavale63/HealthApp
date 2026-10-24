@@ -1,0 +1,63 @@
+# Terraform Variables Configuration Example
+# Copy this file to terraform.tfvars and update with your values
+
+# AWS Configuration
+aws_region = "us-west-2"
+environment = "dev"
+project_name = "bbhealthapp"
+
+# EKS Cluster Configuration
+cluster_name = "bbhealthapp-cluster"
+cluster_version = "1.28"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+public_subnets = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+
+# Node Group Configuration
+node_group_name = "bbhealthapp-node-group"
+node_instance_type = "t3.medium"
+node_desired_size = 3
+node_min_size = 2
+node_max_size = 5
+enable_spot_instances = false
+
+# Feature Flags
+enable_cluster_autoscaler = true
+enable_cloudwatch_logging = true
+
+# RDS Configuration
+db_instance_class = "db.t3.micro"
+db_allocated_storage = 20
+db_name = "binarybrainspg"
+db_username = "admin"
+# IMPORTANT: Use a strong password in production
+# db_password = "your-secure-password-here"
+db_backup_retention_period = 7
+db_backup_window = "03:00-04:00"
+db_maintenance_window = "sun:04:00-sun:05:00"
+db_multi_az = false
+db_performance_insights_enabled = false
+db_monitoring_interval = 0
+db_monitoring_role_arn = ""
+
+# ECR Configuration
+ecr_repository_names = ["bbhealthapp-frontend", "bbhealthapp-master-service", "bbhealthapp-register-service", "bbhealthapp-document-service"]
+ecr_image_tag_mutability = "MUTABLE"
+
+# Bastion Host Configuration
+enable_bastion_host = true
+bastion_instance_type = "t3.micro"
+bastion_key_name = "bbhealthapp-key"
+bastion_allowed_cidr_blocks = ["0.0.0.0/0"]  # RESTRICT IN PRODUCTION
+bastion_static_eip = false
+enable_session_manager = true
+
+# Tags
+tags = {
+  Environment = "dev"
+  Project     = "bbhealthapp"
+  ManagedBy   = "Terraform"
+}

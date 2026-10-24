@@ -1,0 +1,87 @@
+services:
+  # =========================
+  # FRONTEND SERVICE
+  # =========================
+  frontend:
+    build:
+      context: ./bbhealthapp-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - master-service
+      - register-service
+      - document-service
+    networks:
+      - bbhealth-network
+    environment:
+      - REACT_APP_MASTERSVC_HOST=master-service
+      - REACT_APP_REGSVC_HOST=register-service
+      - REACT_APP_DOCSVC_HOST=document-service
+
+  # =========================
+  # MASTER SERVICE
+  # =========================
+  master-service:
+    build:
+      context: ./bbhealthapp-backend/bbhealthapp-api-master
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - bbhealth-network
+    volumes:
+      - master-uploads:/app/useruploads
+      - master-data:/root
+
+  # =========================
+  # REGISTER SERVICE
+  # =========================
+  register-service:
+    build:
+      context: ./bbhealthapp-backend/bbhealthapp-api-register
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - MASTER_SVC_HOST=master-service
+      - MASTER_SVC_PORT=8080
+    depends_on:
+      - master-service
+    networks:
+      - bbhealth-network
+    volumes:
+      - register-uploads:/app/useruploads
+      - register-data:/root
+
+  # =========================
+  # DOCUMENT SERVICE
+  # =========================
+  document-service:
+    build:
+      context: ./bbhealthapp-backend/bbhealthapp-api-document
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - bbhealth-network
+    volumes:
+      - document-uploads:/app/useruploads
+      - document-data:/root
+
+networks:
+  bbhealth-network:
+    driver: bridge
+
+volumes:
+  master-uploads:
+  register-uploads:
+  document-uploads:
+  master-data:
+  register-data:
+  document-data:

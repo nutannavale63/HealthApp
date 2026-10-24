@@ -1,0 +1,15 @@
+apiVersion: v2
+name: bbhealthapp
+description: A Helm chart for BBHealthApp - COVID-19 Health Management System
+type: application
+version: 1.0.0
+appVersion: "1.0"
+keywords:
+  - covid-19
+  - health
+  - microservices
+  - spring-boot
+  - react
+maintainers:
+  - name: BBHealthApp Team
+    email: support@bbhealthapp.com
